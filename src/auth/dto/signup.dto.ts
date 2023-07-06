@@ -13,4 +13,8 @@ export class SignUpDto{
     @IsString()
     readonly password: string;
 
+    @IsNotEmpty()
+    @IsString()
+    readonly role: String;
+
 }

@@ -1,13 +1,41 @@
 import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import * as mongoose from 'mongoose';
+import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
-import { User } from 'src/auth/interfaces/user.interface';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {CreateUserDto} from './dto/create-user.dto';
+import { User } from 'src/auth/schemas/user.schemas';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel('User') private userModel: Model<User>) {}
+
+  constructor(
+    @InjectModel(User.name)
+    private userModel: Model<User>,
+    private jwtService: JwtService,
+){}
+
+    async add(createUserDto: CreateUserDto):Promise<{token:string}>{
+        const {name,email,password,role}=createUserDto;
+        const hashedPassword = await bcrypt.hash(password,5);
+        const user = await this.userModel.create({
+            name,
+            email,
+            password: hashedPassword,
+            role,
+        });
+
+        console.log(user);
+
+        const token = this.jwtService.sign({id:user._id});
+
+        
+        return {token};
+    }
+
+
+
+ // constructor(@InjectModel('User') private userModel: Model<User>) {}
 
   async findAll(offset = 0, limit = 10) {
     return await this.userModel
@@ -17,19 +45,5 @@ export class UsersService {
       .exec();
   }
 
-  async findOne(id: string) {
-    return await this.userModel
-      .find({ _id: mongoose.Types.ObjectId(id) }, { password: 0, __v: 0 })
-      .exec();
-  }
-
-  update(id: string, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user from ${updateUserDto}`; //to-do update as per requirement
-  }
-
-  async remove(id: string) {
-    return await this.userModel.remove({
-      _id: mongoose.Types.ObjectId(id),
-    });
-  }
+  
 }

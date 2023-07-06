@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchema } from './auth/schemas/user.schemas';
 import { RouterModule } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 
 
@@ -12,14 +13,14 @@ import { ConfigModule } from '@nestjs/config';
     AuthModule,
     RouterModule.register([{
       path:'/user',
-      module: AuthModule
+      module: UsersModule
     }
       
     ]),
     AuthModule,
     // Cấu hình kết nối tới cơ sở dữ liệu
-    MongooseModule.forRoot("mongodb://127.0.0.1:27017/auth_js"),//('mongodb://localhost/nest'),
-    MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]), AuthModule, 
+    MongooseModule.forRoot("mongodb://127.0.0.1:27017/auth_js2"),//('mongodb://localhost/nest'),
+    MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]), UsersModule, 
     
   ],
   controllers: [],

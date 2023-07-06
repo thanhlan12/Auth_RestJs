@@ -7,11 +7,14 @@ import { UserSchema } from './schemas/user.schemas';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports:[
+
     PassportModule.register({ defaultStrategy:'jwt'}),
     ConfigModule,
+    UsersModule,
     JwtModule.registerAsync({
       inject:[ConfigService],
       useFactory:(config: ConfigService) =>{

@@ -17,12 +17,13 @@ export class AuthService {
     ){}
 
         async signUp(signUpDto: SignUpDto):Promise<{token:string}>{
-            const {name,email,password}=signUpDto;
+            const {name,email,password,role}=signUpDto;
             const hashedPassword = await bcrypt.hash(password,5);
             const user = await this.userModel.create({
                 name,
                 email,
                 password: hashedPassword,
+                role,
             });
 
             const token = this.jwtService.sign({id:user._id});
@@ -35,7 +36,7 @@ export class AuthService {
             const {email,password} = loginDto;
 
             const user = await this.userModel.findOne({email});
-            console.log(user);
+            //console.log(user);
             if(!user){
                 throw new UnauthorizedException('Invalid email');
             }
