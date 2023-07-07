@@ -43,25 +43,32 @@ export class AuthService {
         }
         this.redis.setnx(`${user.id}`, 0);
 
+
+
+
+
+        const hasFailed = await this.redis.exists(`Failed#${user.id}`);
+
+        if (hasFailed) {
+            console.log('Not Yet!!');
+            throw new UnauthorizedException();
+        }
+
         const isPasswordMathed = await bcrypt.compare(password, user.password);
 
         if (!isPasswordMathed) {
 
             const failedLoginTimes = Number.parseInt(await this.redis.get(`${user.id}`)) + 1;
-            console.log(await this.redis.get(`${user.id}`));
-            if (failedLoginTimes == 3) {
-                this.redis.setex(`${user.id}`, 10, 'true');
-                console.log(await this.redis.get(`${user.id}`));
-                if (await this.redis.ttl(`${user.id}`)) {
 
-                    throw new UnauthorizedException(await this.redis.ttl(`${user.id}`));
-                }
+            if (failedLoginTimes == 3) {
+                this.redis.setex(`Failed#${user.id}`, 10, 'true');
+                this.redis.set(`${user.id}`, 0);
+                throw new UnauthorizedException('Invalid email or password');
             }
-            console.log(await this.redis.ttl(`${user.id}`));
 
             this.redis.set(`${user.id}`, failedLoginTimes);
 
-            
+
             throw new UnauthorizedException('Invalid email or password');
         }
         const token = this.jwtService.sign({ id: user._id });
@@ -72,3 +79,6 @@ export class AuthService {
         return { token };
     }
 }
+
+
+
