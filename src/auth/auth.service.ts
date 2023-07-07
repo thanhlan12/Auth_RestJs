@@ -6,6 +6,8 @@ import { JwtService } from '@nestjs/jwt';
 import { SignUpDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcryptjs';
+import { Redis } from 'ioredis'
+import { InjectRedis } from '@nestjs-modules/ioredis';
 
 
 @Injectable()
@@ -14,41 +16,59 @@ export class AuthService {
         @InjectModel(User.name)
         private userModel: Model<User>,
         private jwtService: JwtService,
-    ){}
+        @InjectRedis() private redis: Redis
+    ) { }
 
-        async signUp(signUpDto: SignUpDto):Promise<{token:string}>{
-            const {name,email,password,role}=signUpDto;
-            const hashedPassword = await bcrypt.hash(password,5);
-            const user = await this.userModel.create({
-                name,
-                email,
-                password: hashedPassword,
-                role,
-            });
+    async signUp(signUpDto: SignUpDto): Promise<{ token: string }> {
+        const { name, email, password, role } = signUpDto;
+        const hashedPassword = await bcrypt.hash(password, 5);
+        const user = await this.userModel.create({
+            name,
+            email,
+            password: hashedPassword,
+            role,
+        });
 
-            const token = this.jwtService.sign({id:user._id});
+        const token = this.jwtService.sign({ id: user._id });
+        return { token };
+    }
+
+
+    async login(loginDto: LoginDto): Promise<{ token: string }> {
+        const { email, password } = loginDto;
+        const user = await this.userModel.findOne({ email });
+        console.log(user);
+        if (!user) {
+            throw new UnauthorizedException('Invalid email');
+        }
+        this.redis.setnx(`${user.id}`, 0);
+
+        const isPasswordMathed = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordMathed) {
+
+            const failedLoginTimes = Number.parseInt(await this.redis.get(`${user.id}`)) + 1;
+            console.log(await this.redis.get(`${user.id}`));
+            if (failedLoginTimes == 3) {
+                this.redis.setex(`${user.id}`, 10, 'true');
+                console.log(await this.redis.get(`${user.id}`));
+                if (await this.redis.ttl(`${user.id}`)) {
+
+                    throw new UnauthorizedException(await this.redis.ttl(`${user.id}`));
+                }
+            }
+            console.log(await this.redis.ttl(`${user.id}`));
+
+            this.redis.set(`${user.id}`, failedLoginTimes);
 
             
-            return {token};
+            throw new UnauthorizedException('Invalid email or password');
         }
+        const token = this.jwtService.sign({ id: user._id });
 
-        async login(loginDto: LoginDto):Promise<{token:string}>{
-            const {email,password} = loginDto;
+        this.redis.set(`${user.id}`, 0);
 
-            const user = await this.userModel.findOne({email});
-            //console.log(user);
-            if(!user){
-                throw new UnauthorizedException('Invalid email');
-            }
-            const isPasswordMathed = await bcrypt.compare(password,user.password);
-                if(!isPasswordMathed){
-                    throw new UnauthorizedException('Invalid email or password');
-                }
-                const token=this.jwtService.sign({id:user._id});
-
-            return {token};
-        }
-
-
-
+        console.log(await this.redis.get(`${user.id}`));
+        return { token };
+    }
 }

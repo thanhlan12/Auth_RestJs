@@ -8,9 +8,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from 'src/users/users.module';
+import { RedisModule } from '@nestjs-modules/ioredis'
 
 @Module({
-  imports:[
+  imports:[ RedisModule.forRootAsync({
+    useFactory: () => ({
+      config: { 
+        url: 'redis://localhost:6379',
+      },
+    }),
+  }),
 
     PassportModule.register({ defaultStrategy:'jwt'}),
     ConfigModule,
@@ -31,7 +38,7 @@ import { UsersModule } from 'src/users/users.module';
   ],
   controllers: [AuthController],
   providers: [AuthService,JwtStrategy], 
-   exports: [JwtStrategy, PassportModule],
+   exports: [JwtStrategy, PassportModule,RedisModule],
 })
 export class AuthModule {}
 
